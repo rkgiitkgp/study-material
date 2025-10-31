@@ -1,0 +1,173 @@
+## 🧭 **Prompt Plan: Database Interview Master Plan (Beginner → Advanced)**
+
+### **I. Fundamentals (All Databases)**
+
+**Goal:** Test conceptual clarity and basic understanding.
+
+#### **A. Core Concepts**
+
+* What is a database? Difference between DBMS and RDBMS?
+* What are ACID properties? Explain each.
+* Difference between OLTP and OLAP.
+* Explain normalization and denormalization.
+* Types of indexes and their use cases.
+* What is a transaction? How does rollback and commit work?
+* What is a deadlock, and how do you prevent it?
+
+#### **B. Query Optimization Basics**
+
+* What is an execution plan?
+* How does the optimizer choose indexes?
+* How does caching improve query performance?
+
+---
+
+### **II. SQL Databases (PostgreSQL Focused)**
+
+#### **A. SQL Querying (Practical)**
+
+* Write a query to find top 3 products in each category.
+* How do you handle duplicates in SQL?
+* Difference between `INNER JOIN`, `LEFT JOIN`, and `FULL JOIN`.
+* How does `GROUP BY` and `HAVING` differ?
+* What are window functions? Give examples using `ROW_NUMBER`, `RANK`, and `LAG`.
+
+#### **B. Advanced SQL Concepts**
+
+* Explain CTE (Common Table Expressions) and recursive queries.
+* How does indexing work in PostgreSQL (B-tree, GIN, GiST)?
+* What is a materialized view, and when should you use it?
+* Explain query planner and `EXPLAIN ANALYZE`.
+* Difference between sequential scan and index scan.
+* How PostgreSQL handles concurrency (`MVCC`)?
+* How to partition a large table in PostgreSQL and why?
+* How to handle full-text search efficiently in PostgreSQL?
+
+#### **C. Performance & Scaling**
+
+* How do you tune queries for performance?
+* How do you handle millions of inserts/updates efficiently?
+* PostgreSQL vs TimescaleDB for time-series data.
+* Connection pooling: Why and how? (PgBouncer)
+* Sharding vs Replication vs Partitioning.
+
+---
+
+### **III. NoSQL Fundamentals**
+
+**Goal:** Check when to use NoSQL and which one fits a use case.
+
+#### **A. Concepts**
+
+* Difference between SQL and NoSQL databases.
+* Types of NoSQL databases:
+
+  * Document (MongoDB)
+  * Key-Value (Redis)
+  * Columnar (Cassandra)
+  * Graph (Neo4j)
+* What is CAP theorem?
+* BASE vs ACID tradeoff.
+
+---
+
+### **IV. MongoDB (Document Store)**
+
+#### **A. Schema Design**
+
+* How do you design schema in MongoDB (embedding vs referencing)?
+* Explain document validation and schema versioning.
+* How do indexes work in MongoDB?
+
+#### **B. Performance**
+
+* How to analyze queries using `explain()`?
+* How do you handle large collections?
+* Replication and sharding concepts in MongoDB.
+* Aggregation framework — use cases and examples.
+
+#### **C. Real Use Case**
+
+* When would you choose MongoDB over PostgreSQL?
+* Example: Course metadata and recommendation data storage.
+
+---
+
+### **V. Elasticsearch (Search Engine / Analytics DB)**
+
+#### **A. Core Concepts**
+
+* What is an inverted index?
+* Explain shards, replicas, and nodes.
+* Difference between term query and match query.
+* Explain relevance scoring and analyzers.
+
+#### **B. Usage & Integration**
+
+* How do you store and query structured vs unstructured data?
+* How to sync PostgreSQL with Elasticsearch?
+* How to optimize search performance and handle large indexes?
+
+#### **C. Monitoring**
+
+* What tools can you use to monitor Elasticsearch performance?
+
+---
+
+### **VI. Cassandra (Columnar Store for High Throughput)**
+
+#### **A. Core Concepts**
+
+* Data model and storage architecture.
+* Explain partition key and clustering key.
+* Consistency levels in Cassandra.
+* Write and read path internals.
+* Compaction and tombstones.
+
+#### **B. Use Cases**
+
+* When would you prefer Cassandra over PostgreSQL?
+* How Cassandra ensures high availability?
+
+---
+
+### **VII. Advanced Topics (System Design & Scaling)**
+
+#### **A. Distributed Databases**
+
+* Leader-follower replication vs multi-leader.
+* Consensus algorithms (Raft, Paxos).
+* Eventual consistency vs strong consistency.
+* How does database handle network partition?
+
+#### **B. Architecture Trade-offs**
+
+* When to denormalize data intentionally.
+* Data lake vs database vs warehouse.
+* Batch vs streaming ingestion.
+* Designing schema for analytics-heavy systems.
+
+#### **C. Real System Design Scenarios**
+
+1. Design a scalable logging system (PostgreSQL + Elasticsearch).
+2. Design a recommendation engine database layer.
+3. Handle billions of time-series events per day (TimescaleDB vs Cassandra).
+4. Design fault-tolerant architecture for global read replicas.
+
+---
+
+### **VIII. DevOps & Observability**
+
+* How do you monitor query performance?
+* Which metrics indicate DB health?
+* How to backup and restore large databases?
+* How to handle schema migrations safely in production?
+
+---
+
+### **IX. Final Round: Problem-Solving / Whiteboard**
+
+* Optimize a slow SQL query live.
+* Design schema for a leaderboard system.
+* Model user-activity tracking in PostgreSQL + Elasticsearch.
+* Implement retry logic with transactional safety.

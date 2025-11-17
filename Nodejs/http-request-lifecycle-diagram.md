@@ -2,9 +2,126 @@
 
 This diagram visualizes the complete HTTP request/response cycle in Node.js from network packet to connection cleanup.
 
-> **Note**: For tools that require pure Mermaid syntax (like Mermaid Live Editor), use the file `http-request-lifecycle.mmd` instead.
+> **Note**: For tools that require pure Mermaid syntax (like Mermaid Live Editor):
+> - Use `http-request-lifecycle-advanced.mmd` for the advanced flow
+> - Use `http-request-lifecycle.mmd` for the basic flow
 
-## Complete Flow Diagram
+## Advanced Complete Flow Diagram (with TLS, HTTP/2, Microtasks)
+
+This comprehensive diagram includes HTTPS/TLS handling, HTTP/2 multiplexing, microtasks queue, and detailed backpressure management.
+
+```mermaid
+flowchart TD
+    Start([🌐 Client Sends HTTP Request]) --> TLScheck{🔐 HTTPS?}
+
+    TLScheck -->|Yes| TLS1[🤝 TLS Handshake<br/>ClientHello ServerHello<br/>ALPN selects HTTP version]
+    TLS1 --> TLS2[🔑 TLS Key Exchange<br/>Certificate Verification]
+    TLS2 --> TLS3[🛡️ Encrypted TCP Stream<br/>Established]
+    TLS3 --> NetEntry
+    TLScheck -->|No| NetEntry
+
+    NetEntry[📦 Network Packet Arrives<br/>NIC to Kernel Network Stack] --> TCP
+    TCP[🔌 TCP Processing<br/>Connection Established<br/>Socket ESTABLISHED] --> KernBuf
+    KernBuf[💾 Kernel Receive Buffer<br/>Stores Incoming Bytes] --> Ready
+    Ready[📢 Kernel Marks Socket Readable<br/>epoll kqueue IOCP notified] --> PollPhase
+
+    PollPhase[⚡ Event Loop Poll Phase<br/>Ready Socket Returned] --> LibuvRead
+    LibuvRead[📖 libuv Reads from Socket<br/>Non Blocking] --> HTTPParser
+    HTTPParser[🔍 llhttp Parsing<br/>Method URL Version Headers] --> ParserDecision{📦 Body Exists?}
+
+    ParserDecision -->|Yes| BodyStream[🔄 Streaming Body Parsing<br/>Chunk by Chunk<br/>Backpressure Aware]
+    ParserDecision -->|No| CreateReqRes
+    BodyStream --> CreateReqRes
+
+    CreateReqRes[🎯 Create IncomingMessage req<br/>and ServerResponse res] --> EmitRequest
+    EmitRequest[🚀 Emit request Event<br/>and Call Handler] --> Handler
+
+    Handler[💻 User Handler Executes] --> Microtasks
+    Microtasks[🧠 Microtasks Run<br/>nextTick Promises queueMicrotask] --> AsyncOps
+
+    AsyncOps{🔥 Async Operations?} -->|Yes| ReturnToLoop[⏳ Event Loop Waits<br/>for DB IO Timers Workers]
+    AsyncOps -->|No| PrepareResponse
+
+    ReturnToLoop --> Microtasks
+    ReturnToLoop --> PrepareResponse
+
+    PrepareResponse[📝 Prepare Response<br/>Set Headers Write End] --> BackpressureCheck
+
+    BackpressureCheck{♻️ Write Buffer Full?} -->|Yes| PauseReads[⏸️ Pause Socket Reads<br/>Apply Backpressure]
+    PauseReads --> DrainEvent[🔈 drain Event<br/>Resume Writes] --> BackpressureCheck
+    BackpressureCheck -->|No| WriteSocket
+
+    WriteSocket[📡 libuv Write to Socket<br/>Non Blocking] --> TLSApply{🔐 TLS Encryption?}
+
+    TLSApply -->|Yes| TLSEncode[🔒 TLS Record Encoding] --> KernelSend
+    TLSApply -->|No| KernelSend
+
+    KernelSend[⚙️ Kernel TCP Stack<br/>Segmentation and Checksums] --> NetOut
+    NetOut[🌍 Packets Sent to Client] --> Completion
+
+    Completion[🏁 res.end Completed<br/>and Flushed] --> ConnDecision{🔀 Keep Alive?}
+
+    ConnDecision -->|No| CloseTCP
+    ConnDecision -->|Yes HTTP/1.1| IdleReuse[♻️ Keep Alive<br/>Idle Wait for Next Request]
+    ConnDecision -->|Yes HTTP/2| H2Stream[📶 HTTP/2 Multiplexing<br/>Multiple Streams]
+
+    CloseTCP[🔒 FIN ACK TCP Close<br/>Socket CLOSED] --> CloseCallbacks
+    IdleReuse --> Ready
+    H2Stream --> Ready
+
+    CloseCallbacks[🗑️ Close Callbacks Phase<br/>Cleanup FD Free Buffers] --> End
+    End([✨ End of Lifecycle])
+
+    style Start fill:#C8E6C9,stroke:#2E7D32,stroke-width:3px
+    style End fill:#FFCDD2,stroke:#C62828,stroke-width:3px
+    style TLScheck fill:#FFF9C4,stroke:#F57F17,stroke-width:2px
+    style TLS1 fill:#E1F5FE,stroke:#0288D1,stroke-width:2px
+    style TLS2 fill:#E1F5FE,stroke:#0288D1,stroke-width:2px
+    style TLS3 fill:#E1F5FE,stroke:#0288D1,stroke-width:2px
+    style NetEntry fill:#E1F5FF,stroke:#0288D1,stroke-width:2px
+    style TCP fill:#E1F5FF,stroke:#0288D1,stroke-width:2px
+    style KernBuf fill:#E1F5FF,stroke:#0288D1,stroke-width:2px
+    style Ready fill:#E1F5FF,stroke:#0288D1,stroke-width:2px
+    style PollPhase fill:#FFF4E1,stroke:#F57C00,stroke-width:3px
+    style LibuvRead fill:#FFF4E1,stroke:#F57C00,stroke-width:2px
+    style HTTPParser fill:#FFF4E1,stroke:#F57C00,stroke-width:2px
+    style ParserDecision fill:#FFF9C4,stroke:#F57F17,stroke-width:2px
+    style BodyStream fill:#FFF4E1,stroke:#F57C00,stroke-width:2px
+    style CreateReqRes fill:#FFF4E1,stroke:#F57C00,stroke-width:2px
+    style EmitRequest fill:#FFF4E1,stroke:#F57C00,stroke-width:2px
+    style Handler fill:#E8F5E9,stroke:#388E3C,stroke-width:3px
+    style Microtasks fill:#E1BEE7,stroke:#8E24AA,stroke-width:2px
+    style AsyncOps fill:#FFF9C4,stroke:#F57F17,stroke-width:2px
+    style ReturnToLoop fill:#E1F5FE,stroke:#0288D1,stroke-width:2px
+    style PrepareResponse fill:#E8F5E9,stroke:#388E3C,stroke-width:2px
+    style BackpressureCheck fill:#FFF9C4,stroke:#F57F17,stroke-width:2px
+    style PauseReads fill:#FFCCBC,stroke:#E64A19,stroke-width:2px
+    style DrainEvent fill:#C8E6C9,stroke:#2E7D32,stroke-width:2px
+    style WriteSocket fill:#FCE4EC,stroke:#C2185B,stroke-width:2px
+    style TLSApply fill:#FFF9C4,stroke:#F57F17,stroke-width:2px
+    style TLSEncode fill:#E1F5FE,stroke:#0288D1,stroke-width:2px
+    style KernelSend fill:#FCE4EC,stroke:#C2185B,stroke-width:2px
+    style NetOut fill:#FCE4EC,stroke:#C2185B,stroke-width:2px
+    style Completion fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px
+    style ConnDecision fill:#FFF9C4,stroke:#F57F17,stroke-width:2px
+    style CloseTCP fill:#FFCDD2,stroke:#C62828,stroke-width:2px
+    style IdleReuse fill:#C8E6C9,stroke:#2E7D32,stroke-width:2px
+    style H2Stream fill:#B2DFDB,stroke:#00897B,stroke-width:2px
+    style CloseCallbacks fill:#F3E5F5,stroke:#7B1FA2,stroke-width:2px
+```
+
+### Advanced Features Covered:
+
+- **🔐 TLS/HTTPS**: Complete TLS handshake including ALPN negotiation
+- **🧠 Microtasks Queue**: nextTick, Promises, queueMicrotask execution
+- **🔄 Streaming & Backpressure**: Detailed body streaming with backpressure management
+- **📶 HTTP/2**: Multiplexing support with stream reuse
+- **♻️ Connection Reuse**: HTTP/1.1 keep-alive and HTTP/2 stream handling
+- **⏳ Event Loop Interaction**: Shows how async operations return control to event loop
+
+---
+
+## Basic Complete Flow Diagram
 
 ```mermaid
 flowchart TD
@@ -264,6 +381,7 @@ gantt
 
 | Diagram | Purpose | Best For |
 |---------|---------|----------|
+| **Advanced Flow** | TLS, HTTP/2, Microtasks, Backpressure | Production-grade understanding |
 | Complete Flow | All 19 steps in detail | Deep understanding |
 | Simplified Flow | High-level overview | Quick reference |
 | Phase Breakdowns | Focus on each phase | Learning specific phases |
@@ -290,10 +408,31 @@ gantt
 
 ## Notes
 
-- Complete flow shows all 19 steps with emojis for quick identification
-- Simplified flow shows high-level components
-- Phase breakdowns show detailed steps within each phase
-- Timeline shows approximate timing in milliseconds
-- Async comparison demonstrates why Node.js handles concurrent requests efficiently
+- **Advanced flow** includes TLS/HTTPS, HTTP/2 multiplexing, microtasks queue, and backpressure handling
+- **Complete flow** shows all 19 steps with emojis for quick identification
+- **Simplified flow** shows high-level components
+- **Phase breakdowns** show detailed steps within each phase
+- **Timeline** shows approximate timing in milliseconds
+- **Async comparison** demonstrates why Node.js handles concurrent requests efficiently
 - All diagrams use consistent color coding for easy navigation
+
+## Key Differences: Advanced vs Basic Flow
+
+| Feature | Advanced Flow | Basic Flow |
+|---------|---------------|------------|
+| TLS/HTTPS | ✅ Full TLS handshake & encryption | ❌ HTTP only |
+| HTTP/2 | ✅ Multiplexing & streams | ❌ HTTP/1.1 only |
+| Microtasks | ✅ nextTick, Promises queue | ❌ Not shown |
+| Backpressure | ✅ Detailed pause/resume | ✅ Basic mention |
+| Body Streaming | ✅ Chunk-by-chunk parsing | ✅ Basic mention |
+| Complexity | Production-ready | Learning-focused |
+
+### When to Use Which Diagram?
+
+- **Learning Node.js**: Start with Basic Complete Flow → Phase Breakdowns
+- **Understanding HTTPS**: Use Advanced Flow (shows TLS handshake)
+- **Debugging Performance**: Use Timeline + Advanced Flow
+- **Learning HTTP/2**: Use Advanced Flow (shows multiplexing)
+- **Quick Reference**: Use Simplified Flow
+- **Teaching/Presentations**: Use Simplified or Basic Flow
 

@@ -55,3 +55,13 @@ Here's a categorized list of **realistic questions** he might ask you:
 
 ---
 
+### 🔍 **Elasticsearch & Search**
+
+1. How would you design a search system using Elasticsearch for a large e-commerce platform?
+2. Explain the difference between term queries and match queries in Elasticsearch.
+3. How do you sync data between PostgreSQL and Elasticsearch efficiently?
+4. How would you handle relevance scoring and custom ranking in search results?
+5. What's your approach to scaling and managing large Elasticsearch clusters?
+
+---
+

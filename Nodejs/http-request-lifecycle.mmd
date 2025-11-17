@@ -1,46 +1,48 @@
 flowchart TD
-    Start([Client Sends HTTP Request]) --> Phase1[Phase 1: Network & OS Layer]
+    Start([🌐 Client Sends HTTP Request]) --> Phase1[📦 PHASE 1: Network & OS Layer]
     
-    Phase1 --> Step1[Step 1: Network Packet Arrives<br/>TCP packet travels through network<br/>Arrives at NIC]
-    Step1 --> Step2[Step 2: TCP Processing<br/>Kernel validates packet<br/>TCP handshake if new connection]
-    Step2 --> Step3[Step 3: Kernel Buffering<br/>Data stored in TCP receive buffer<br/>SO_RCVBUF ~200KB]
-    Step3 --> Step4[Step 4: Event Notification<br/>Kernel marks socket readable<br/>epoll/kqueue/IOCP notification]
+    Phase1 --> Step1["🔌 Step 1: Network Packet Arrives<br/>• TCP packet travels through network<br/>• Arrives at server NIC"]
+    Step1 --> Step2["🔐 Step 2: TCP Processing<br/>• Kernel validates packet<br/>• TCP handshake if new connection<br/>• Socket → ESTABLISHED state"]
+    Step2 --> Step3["💾 Step 3: Kernel Buffering<br/>• Data → TCP receive buffer<br/>• SO_RCVBUF ~200KB"]
+    Step3 --> Step4["📢 Step 4: Event Notification<br/>• Kernel marks socket readable<br/>• epoll/kqueue/IOCP notified"]
     
-    Step4 --> Phase2[Phase 2: Event Loop Poll Phase]
+    Step4 --> Phase2[⚡ PHASE 2: Event Loop Poll Phase]
     
-    Phase2 --> Step5[Step 5: Poll Phase Activation<br/>Event loop enters poll phase<br/>epoll_wait returns ready sockets]
-    Step5 --> Step6[Step 6: Socket Read Operation<br/>libuv reads from socket<br/>Non-blocking read from kernel buffer]
-    Step6 --> Step7[Step 7: HTTP Parsing Begins<br/>llhttp parser processes request line<br/>Extracts method, URL, version]
-    Step7 --> Step8[Step 8: Header Parsing<br/>Parser reads headers line by line<br/>Headers end with empty line]
-    Step8 --> Step9[Step 9: Request Object Creation<br/>Create IncomingMessage req<br/>Create ServerResponse res]
-    Step9 --> Step10[Step 10: Handler Invocation<br/>Server emits request event<br/>Handler called synchronously]
+    Phase2 --> Step5["🔄 Step 5: Poll Phase Activation<br/>• Event loop enters poll phase<br/>• epoll_wait returns ready sockets"]
+    Step5 --> Step6["📖 Step 6: Socket Read Operation<br/>• libuv reads from socket<br/>• Non-blocking read from kernel"]
+    Step6 --> Step7["🔍 Step 7: HTTP Parsing Begins<br/>• llhttp parser processes request<br/>• Extracts: method, URL, version"]
+    Step7 --> Step8["📋 Step 8: Header Parsing<br/>• Parser reads headers line by line<br/>• Headers end with \\r\\n\\r\\n"]
+    Step8 --> Step9["🎯 Step 9: Request Object Creation<br/>• Create IncomingMessage req<br/>• Create ServerResponse res"]
+    Step9 --> Step10["🚀 Step 10: Handler Invocation<br/>• Server emits 'request' event<br/>• Handler called synchronously"]
     
-    Step10 --> Phase3[Phase 3: Application Processing]
+    Step10 --> Phase3[💻 PHASE 3: Application Processing]
     
-    Phase3 --> Step11[Step 11: Handler Execution<br/>Your code processes request<br/>May perform async operations]
-    Step11 --> Step12[Step 12: Response Preparation<br/>Set response headers<br/>Write response body]
+    Phase3 --> Step11["⚙️ Step 11: Handler Execution<br/>• Your code processes request<br/>• May perform async operations"]
+    Step11 --> Step12["📝 Step 12: Response Preparation<br/>• Set response headers<br/>• Write response body"]
     
-    Step12 --> Phase4[Phase 4: Response Sending]
+    Step12 --> Phase4[📤 PHASE 4: Response Sending]
     
-    Phase4 --> Step13[Step 13: Response Writing<br/>Data added to response buffer<br/>Backpressure handling]
-    Step13 --> Step14[Step 14: Socket Write Operation<br/>libuv writes to socket<br/>Non-blocking write to kernel]
-    Step14 --> Step15[Step 15: Kernel Network Stack<br/>TCP segments data into packets<br/>Adds TCP headers]
-    Step15 --> Step16[Step 16: Network Transmission<br/>Packets travel to client<br/>Client receives and processes]
+    Phase4 --> Step13["✍️ Step 13: Response Writing<br/>• Data → response buffer<br/>• Backpressure handling"]
+    Step13 --> Step14["📡 Step 14: Socket Write Operation<br/>• libuv writes to socket<br/>• Non-blocking write to kernel"]
+    Step14 --> Step15["🔧 Step 15: Kernel Network Stack<br/>• TCP segments data into packets<br/>• Adds TCP headers, checksums"]
+    Step15 --> Step16["🌍 Step 16: Network Transmission<br/>• Packets travel to client<br/>• Client receives and processes"]
     
-    Step16 --> Phase5[Phase 5: Connection Cleanup]
+    Step16 --> Phase5[🧹 PHASE 5: Connection Cleanup]
     
-    Phase5 --> Step17[Step 17: Response Completion<br/>res.end called and flushed<br/>Connection may close or keep-alive]
-    Step17 --> Decision{Connection<br/>Closing?}
-    Decision -->|Yes| Step18[Step 18: Connection Closure<br/>FIN/ACK handshake<br/>Socket enters CLOSED state]
-    Decision -->|No Keep-Alive| Step19[Step 19: Close Phase Cleanup<br/>Remove from epoll watch list<br/>Close file descriptor<br/>Free memory]
-    Step18 --> Step19
-    Step19 --> End([End])
+    Phase5 --> Step17["✅ Step 17: Response Completion<br/>• res.end called and flushed<br/>• Connection decision point"]
+    Step17 --> Decision{🔀 Connection<br/>Closing?}
+    Decision -->|Yes| Step18["🔒 Step 18: Connection Closure<br/>• FIN/ACK handshake<br/>• Socket → CLOSED state"]
+    Decision -->|No, Keep-Alive| KeepAlive["♻️ Connection Kept Open<br/>• Reuse for next request<br/>• Timeout after idle period"]
+    Step18 --> Step19["🗑️ Step 19: Close Phase Cleanup<br/>• Remove from epoll watch list<br/>• Close file descriptor<br/>• Free memory buffers"]
+    KeepAlive -.->|Eventually| Step19
+    Step19 --> End([✨ End])
     
-    style Phase1 fill:#e1f5ff
-    style Phase2 fill:#fff4e1
-    style Phase3 fill:#e8f5e9
-    style Phase4 fill:#fce4ec
-    style Phase5 fill:#f3e5f5
-    style Start fill:#c8e6c9
-    style End fill:#ffcdd2
-
+    style Phase1 fill:#e1f5ff,stroke:#0288d1,stroke-width:3px
+    style Phase2 fill:#fff4e1,stroke:#f57c00,stroke-width:3px
+    style Phase3 fill:#e8f5e9,stroke:#388e3c,stroke-width:3px
+    style Phase4 fill:#fce4ec,stroke:#c2185b,stroke-width:3px
+    style Phase5 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px
+    style Start fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
+    style End fill:#ffcdd2,stroke:#c62828,stroke-width:2px
+    style Decision fill:#fff9c4,stroke:#f57f17,stroke-width:2px
+    style KeepAlive fill:#e1bee7,stroke:#8e24aa,stroke-width:2px
